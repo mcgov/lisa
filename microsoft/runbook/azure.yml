@@ -2,10 +2,23 @@ name: azure default
 parent:
   - path: ./tiers/tier.yml
 variable:
+  - name: location
+    value: westus2
   - name: reserve_environment
     value: "no"
 notifier:
   - type: html
+environment:
+  warn_as_error: false
+  allow_create: false
+  environments:
+    - nodes:
+        - type: requirement
+          core_count:
+            min: 4
+          azure:
+            gallery: $(gallery_image)
+            location: $(location)
 platform:
   - type: azure
     admin_private_key_file: $(admin_private_key_file)
@@ -13,3 +26,6 @@ platform:
     azure:
       subscription_id: $(subscription_id)
       wait_delete: false
+      availability_set_properties:
+        platformFaultDomainCount: 1
+        platformUpdateDomainCount: 1
