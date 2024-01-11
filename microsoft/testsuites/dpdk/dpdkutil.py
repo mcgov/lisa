@@ -238,6 +238,7 @@ def initialize_node_resources(
     hugepage_size: HugePageSize,
     sample_apps: Union[List[str], None] = None,
     extra_nics: Union[List[NicInfo], None] = None,
+    build_32bit: bool = False,
 ) -> DpdkTestResources:
     _set_forced_source_by_distro(node, variables)
     if pmd == "failsafe" and node.nics.is_mana_device_present():
@@ -285,6 +286,7 @@ def initialize_node_resources(
         force_net_failsafe_pmd=force_net_failsafe_pmd,
         rdma_core_source=rdma_core_source,
         rdma_core_ref=rdma_core_ref,
+        build_32bit_dpdk=build_32bit,
     )
 
     # init and enable hugepages (required by dpdk)
@@ -434,11 +436,17 @@ def verify_dpdk_build(
     pmd: str,
     hugepage_size: HugePageSize,
     multiple_queues: bool = False,
+    build_32bit: bool = False,
 ) -> DpdkTestResources:
     # setup and unwrap the resources for this test
     try:
         test_kit = initialize_node_resources(
-            node, log, variables, pmd, hugepage_size=hugepage_size
+            node,
+            log,
+            variables,
+            pmd,
+            hugepage_size=hugepage_size,
+            build_32bit=build_32bit,
         )
     except (NotEnoughMemoryException, UnsupportedOperationException) as err:
         raise SkippedException(err)
