@@ -24,7 +24,9 @@ class Pkgconfig(Tool):
         return True
 
     def package_info_exists(self, package_name: str) -> bool:
-        package_info_result = self.run(f"--modversion {package_name}", force_run=True)
+        package_info_result = self.run(
+            f"--modversion {package_name}", force_run=True, shell=True
+        )
         return package_info_result.exit_code == 0
 
     def get_package_info(

@@ -7,32 +7,31 @@ from urllib.parse import urlparse
 from assertpy import fail
 
 from lisa import Node
-from lisa.operating_system import Debian, Fedora, Suse
+from lisa.operating_system import Debian, Fedora, Suse, OperatingSystem
 from lisa.tools import Git, Make, Pkgconfig, Tar, Wget
 from lisa.util import LisaException, SkippedException, is_valid_source_code_package
-
-AMD64 = "x86_64"
-I386 = "i386"
-
+from enum import Enum
+from typing import Dict
+from microsoft.testsuites.dpdk.common import InstallArch
 
 class RdmaCoreManager:
     _install_cmake_line = {
-        I386: (
+        InstallArch.i386: (
             "PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig cmake -DIN_PLACE=0 "
             "-DNO_MAN_PAGES=1 -DCMAKE_INSTALL_PREFIX=/usr "
             "-DCMAKE_C_COMPILER=/usr/bin/i686-linux-gnu-gcc -DCMAKE_C_FLAGS=-m32"
         ),
-        AMD64: "cmake -DIN_PLACE=0 -DNO_MAN_PAGES=1 -DCMAKE_INSTALL_PREFIX=/usr",
+        InstallArch.x86_64: "cmake -DIN_PLACE=0 -DNO_MAN_PAGES=1 -DCMAKE_INSTALL_PREFIX=/usr",
     }
-    _install_packages = {
-        AMD64: {
-            Debian: (
+    _install_packages : Dict[InstallArch, Dict[type, str]]= {
+        InstallArch.x86_64: {
+            type(Debian): (
                 "cmake libudev-dev "
                 "libnl-3-dev libnl-route-3-dev ninja-build pkg-config "
                 "valgrind python3-dev cython3 python3-docutils pandoc "
                 "libssl-dev libelf-dev python3-pip libnuma-dev"
             ),
-            Fedora: (
+            type(Fedora): (
                 "cmake gcc libudev-devel "
                 "libnl3-devel pkg-config "
                 "valgrind python3-devel python3-docutils  "
@@ -43,23 +42,20 @@ class RdmaCoreManager:
                 "kernel-headers elfutils-libelf-devel meson ninja-build libbpf-devel "
             ),
         },
-        I386: {
-            Debian: (
+        InstallArch.i386: {
+            type(Debian): (
                 "gcc:i386 cmake ninja-build meson libnl-3-dev:i386 "
                 "libnl-route-3-dev:i386 pkg-config valgrind libelf-dev:i386"
             ),
         },
     }
 
-    def __init__(self, node: Node, rdma_core_source: str, rdma_core_ref: str) -> None:
+    def __init__(self, node: Node, rdma_core_source: str, rdma_core_ref: str, install_arch : InstallArch = InstallArch.x86_64) -> None:
         self.is_installed_from_source = False
         self.node = node
         self._rdma_core_source = rdma_core_source
         self._rdma_core_ref = rdma_core_ref
-        self._build_arch = AMD64
-
-    def enable_32bit_build(self) -> None:
-        self._build_arch = I386
+        self._build_arch = install_arch
 
     def get_missing_distro_packages(self) -> str:
         distro = self.node.os
@@ -175,10 +171,10 @@ class RdmaCoreManager:
 
         # for dependencies, see https://github.com/linux-rdma/rdma-core#building
         if isinstance(distro, Debian):
-            distro.install_packages(self._install_packages[self._build_arch][Debian])
+            distro.install_packages(self._install_packages[self._build_arch][type(Debian)])
         elif isinstance(distro, Fedora):
             distro.group_install_packages("Development Tools")
-            distro.install_packages(self._install_packages[self._build_arch][Fedora])
+            distro.install_packages(self._install_packages[self._build_arch][type(Fedora)])
         else:
             # no-op, throw for invalid distro is before this function
             return

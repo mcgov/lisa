@@ -2,6 +2,7 @@ import itertools
 import time
 from collections import deque
 from decimal import Decimal
+from enum import Enum
 from functools import partial
 from typing import Any, Dict, List, Tuple, Union
 
@@ -48,6 +49,7 @@ from lisa.util.parallel import TaskManager, run_in_parallel, run_in_parallel_asy
 from microsoft.testsuites.dpdk.common import (
     AZ_ROUTE_ALL_TRAFFIC,
     DPDK_STABLE_GIT_REPO,
+    InstallArch,
     check_dpdk_support,
 )
 from microsoft.testsuites.dpdk.dpdktestpmd import PACKAGE_MANAGER_SOURCE, DpdkTestpmd
@@ -276,7 +278,10 @@ def initialize_node_resources(
 
     # verify SRIOV is setup as-expected on the node after compat check
     node.nics.check_pci_enabled(pci_enabled=True)
-
+    if build_32bit:
+        rdma_arch = InstallArch.i386
+    else:
+        rdma_arch = InstallArch.x86_64
     # create tool, initialize testpmd tool (installs dpdk)
     testpmd: DpdkTestpmd = node.tools.get(
         DpdkTestpmd,
@@ -287,6 +292,7 @@ def initialize_node_resources(
         rdma_core_source=rdma_core_source,
         rdma_core_ref=rdma_core_ref,
         build_32bit_dpdk=build_32bit,
+        build_rdma_core_arch=rdma_arch,
     )
 
     # init and enable hugepages (required by dpdk)

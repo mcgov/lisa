@@ -2,12 +2,15 @@
 # Licensed under the MIT license.
 
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict
 
 from assertpy import assert_that
 
-from lisa import Node
+from lisa import LisaException, Node
 from lisa.operating_system import Debian, Oracle, Redhat, Suse, Ubuntu
+from lisa.tools import Lscpu
+from lisa.tools.lscpu import ARCH_AARCH64, ARCH_X86_64
 from lisa.util import UnsupportedDistroException
 
 DPDK_STABLE_GIT_REPO = "https://dpdk.org/git/dpdk-stable"
@@ -15,6 +18,22 @@ DPDK_STABLE_GIT_REPO = "https://dpdk.org/git/dpdk-stable"
 # azure routing table magic subnet prefix
 # signals 'route all traffic on this subnet'
 AZ_ROUTE_ALL_TRAFFIC = "0.0.0.0/0"
+
+
+class InstallArch(Enum):
+    x86_64 = "x86_64"
+    i386 = "i386"
+    arm64 = "aarch64"
+    UNKNOWN = "error"
+
+
+def get_default_install_arch(node: Node) -> InstallArch:
+    arch = node.tools[Lscpu].get_architecture()
+    if arch == ARCH_X86_64:
+        return InstallArch.x86_64
+    if arch == ARCH_AARCH64:
+        return InstallArch.arm64
+    raise LisaException("Could not determine default arch from lscpu")
 
 
 def force_dpdk_default_source(variables: Dict[str, Any]) -> None:

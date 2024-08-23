@@ -36,6 +36,8 @@ from lisa.util import (
 )
 from lisa.util.constants import DEVICE_TYPE_SRIOV, SIGINT
 from microsoft.testsuites.dpdk.common import (
+    InstallArch,
+    get_default_install_arch,
     is_ubuntu_latest_or_prerelease,
     is_ubuntu_lts_version,
 )
@@ -131,9 +133,10 @@ class DpdkTestpmd(Tool):
         "libnuma-dev:i386",
         "pkg-config",
         "python3-pip",
-        "gcc:i386",
         "cmake",
         "libnl-3-dev:i386",
+        "meson",
+        "gcc-i686-linux-gnu",
     ]
     _rte_target = "x86_64-native-linuxapp-gcc"
     _ninja_url = "https://github.com/ninja-build/ninja/"
@@ -465,12 +468,19 @@ class DpdkTestpmd(Tool):
         # then for rdma-core
         rdma_core_source = kwargs.pop("rdma_core_source", "")
         rdma_core_ref = kwargs.pop("rdma_core_ref", "")
+        # TODO: handle dpdk install arch similar to RDMA install arch
+        self._install_32bit_dpdk = kwargs.pop("build_32bit_dpdk", False)
+        if not self._install_32bit_dpdk:
+            rdma_install_arch = get_default_install_arch(self.node)
+        else:
+            rdma_install_arch = kwargs.pop("rdma_core_arch", InstallArch.x86_64)
+
         self.rdma_core = RdmaCoreManager(
             node=self.node,
             rdma_core_source=rdma_core_source,
             rdma_core_ref=rdma_core_ref,
+            install_arch=rdma_install_arch,
         )
-        self._install_32bit_dpdk = kwargs.pop("build_32bit_dpdk", False)
         self._sample_apps_to_build = kwargs.pop("sample_apps", [])
         self._dpdk_version_info = VersionInfo(0, 0)
         self._testpmd_install_path: str = ""
@@ -622,8 +632,6 @@ class DpdkTestpmd(Tool):
         ):
             # ensure no older version is installed
             distro.uninstall_packages("rdma-core")
-            if self._install_32bit_dpdk:
-                self.rdma_core.enable_32bit_build()
             self.rdma_core.do_source_install()
 
         # otherwise, install kernel and dpdk deps from package manager, git, or tar
@@ -724,7 +732,7 @@ class DpdkTestpmd(Tool):
             update_envs = {
                 "CC": "/usr/bin/i686-linux-gnu-gcc",
                 "LDFLAGS": "-m32",
-                "PKG_CONFIG_LIBDIR": "/usr/lib/i386-linux-gnu/pkgconfig",
+                "PKG_CONFIG_LIBDIR": "/usr/local/lib/i386-linux-gnu/pkgconfig",
             }
             extra_meson_args += " -Dc_link_args=-m32"
         else:
@@ -773,8 +781,8 @@ class DpdkTestpmd(Tool):
         # dpdk 32bit still installing into lib64... need to fix in meson probably
 
         library_bashrc_lines = [
-            "export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/usr/local/lib64/pkgconfig/",
-            "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64/",
+            "export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/usr/local/lib64/pkgconfig/:/usr/local/lib/i386-linux-gnu/pkgconfig/",
+            "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64/:/usr/local/lib/i386-linux-gnu/",
         ]
         echo_tool.write_to_file(
             ";".join(library_bashrc_lines),
