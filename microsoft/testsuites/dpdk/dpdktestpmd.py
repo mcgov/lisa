@@ -792,7 +792,11 @@ class DpdkTestpmd(Tool):
 
         self.find_testpmd_binary(check_path="/usr/local/bin")
         self._dpdk_version_info = self.node.tools[Pkgconfig].get_package_version(
-            self._dpdk_lib_name, update_cached=True
+            self._dpdk_lib_name,
+            update_cached=True,
+            update_env={
+                "PKG_CONFIG_PATH": "$PKG_CONFIG_PATH:/usr/local/lib64/pkgconfig/:/usr/local/lib/i386-linux-gnu/pkgconfig/"
+            },
         )
         return True
 

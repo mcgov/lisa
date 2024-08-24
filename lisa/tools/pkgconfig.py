@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
+from typing import Dict, Optional
+
 from assertpy import assert_that
 from semver import VersionInfo
 
@@ -23,9 +25,14 @@ class Pkgconfig(Tool):
         self.node.os.install_packages("pkg-config")
         return True
 
-    def package_info_exists(self, package_name: str) -> bool:
+    def package_info_exists(
+        self, package_name: str, update_env: Optional[Dict[str, str]] = None
+    ) -> bool:
         package_info_result = self.run(
-            f"--modversion {package_name}", force_run=True, shell=True
+            f"--modversion {package_name}",
+            force_run=True,
+            shell=True,
+            update_envs=update_env,
         )
         return package_info_result.exit_code == 0
 
@@ -33,8 +40,11 @@ class Pkgconfig(Tool):
         self,
         package_name: str,
         update_cached: bool = False,
+        update_env: Optional[Dict[str, str]] = None,
     ) -> str:
-        info_exists = self.package_info_exists(package_name=package_name)
+        info_exists = self.package_info_exists(
+            package_name=package_name, update_env=update_env
+        )
         assert_that(info_exists).described_as(
             (
                 f"pkg-config information was not available for {package_name}. "
@@ -42,10 +52,17 @@ class Pkgconfig(Tool):
                 f"ensure .pc file is available for {package_name} on this OS."
             )
         ).is_true()
-        return self.run(f"--modversion {package_name}", shell=True).stdout
+        return self.run(
+            f"--modversion {package_name}", shell=True, update_envs=update_env
+        ).stdout
 
     def get_package_version(
-        self, package_name: str, update_cached: bool = False
+        self,
+        package_name: str,
+        update_cached: bool = False,
+        update_env: Optional[Dict[str, str]] = None,
     ) -> VersionInfo:
-        version_info = self.get_package_info(package_name, update_cached=update_cached)
+        version_info = self.get_package_info(
+            package_name, update_cached=update_cached, update_env=update_env
+        )
         return parse_version(version_info)
