@@ -2,17 +2,19 @@
 # Licensed under the MIT license.
 
 import re
+from enum import Enum
+from pathlib import PurePath
+from typing import Dict
 from urllib.parse import urlparse
 
 from assertpy import fail
 
 from lisa import Node
-from lisa.operating_system import Debian, Fedora, Suse, OperatingSystem
+from lisa.operating_system import Debian, Fedora, OperatingSystem, Suse
 from lisa.tools import Git, Make, Pkgconfig, Tar, Wget
-from lisa.util import LisaException, SkippedException, is_valid_source_code_package
-from enum import Enum
-from typing import Dict
+from lisa.util import LisaException, SkippedException
 from microsoft.testsuites.dpdk.common import InstallArch
+
 
 class RdmaCoreManager:
     _install_cmake_line = {
@@ -23,7 +25,7 @@ class RdmaCoreManager:
         ),
         InstallArch.x86_64: "cmake -DIN_PLACE=0 -DNO_MAN_PAGES=1 -DCMAKE_INSTALL_PREFIX=/usr",
     }
-    _install_packages : Dict[InstallArch, Dict[type, str]]= {
+    _install_packages: Dict[InstallArch, Dict[type, str]] = {
         InstallArch.x86_64: {
             type(Debian): (
                 "cmake libudev-dev "
@@ -50,7 +52,13 @@ class RdmaCoreManager:
         },
     }
 
-    def __init__(self, node: Node, rdma_core_source: str, rdma_core_ref: str, install_arch : InstallArch = InstallArch.x86_64) -> None:
+    def __init__(
+        self,
+        node: Node,
+        rdma_core_source: str,
+        rdma_core_ref: str,
+        install_arch: InstallArch = InstallArch.x86_64,
+    ) -> None:
         self.is_installed_from_source = False
         self.node = node
         self._rdma_core_source = rdma_core_source
@@ -72,24 +80,6 @@ class RdmaCoreManager:
         else:
             fail("Invalid OS for rdma-core source installation.")
         return package
-
-    def _check_source_name(self) -> bool:
-        source = self._rdma_core_source
-        try:
-            parts = urlparse(self._rdma_core_source)
-        except ValueError:
-            raise LisaException(f"Invalid rdma-core source build url: {source}")
-        file_path = parts.path.split("/")[-1]
-        return (
-            any([parts.scheme == x for x in ["https", "ssh"]])
-            and parts.netloc != ""
-            and (
-                file_path == "rdma-core.git"
-                or (file_path.startswith("rdma-core") and file_path.endswith(".tar.gz"))
-            )
-        )
-
-    _source_pattern = re.compile(r"rdma-core(.v?[0-9]+)*.(git|tar(\.gz)?)")
 
     def _check_source_install(self) -> None:
         if self._rdma_core_source:
@@ -113,21 +103,6 @@ class RdmaCoreManager:
                 "https://github.com/linux-rdma/rdma-core/"
                 "releases/download/v46.0/rdma-core-46.0.tar.gz"
             )
-
-        # finally, validate what we have looks reasonable and cool
-        is_valid_package = is_valid_source_code_package(
-            source_url=self._rdma_core_source,
-            expected_package_name_pattern=self._source_pattern,
-            allowed_protocols=["https"],
-            expected_domains=[
-                "visualstudio.com",
-                "gitlab.com",
-                "github.com",
-                "git.launchpad.net",
-            ],
-        )
-        if not is_valid_package:
-            raise SkippedException(self._get_source_pkg_error_message())
 
         self.is_installed_from_source = True
 
@@ -171,10 +146,14 @@ class RdmaCoreManager:
 
         # for dependencies, see https://github.com/linux-rdma/rdma-core#building
         if isinstance(distro, Debian):
-            distro.install_packages(self._install_packages[self._build_arch][type(Debian)])
+            distro.install_packages(
+                self._install_packages[self._build_arch][type(Debian)]
+            )
         elif isinstance(distro, Fedora):
             distro.group_install_packages("Development Tools")
-            distro.install_packages(self._install_packages[self._build_arch][type(Fedora)])
+            distro.install_packages(
+                self._install_packages[self._build_arch][type(Fedora)]
+            )
         else:
             # no-op, throw for invalid distro is before this function
             return
@@ -189,6 +168,11 @@ class RdmaCoreManager:
                 git_ref = git.get_tag(cwd=source_path)
             git.checkout(git_ref, cwd=source_path)
         elif self.is_from_tarball():
+            if not urlparse(self._rdma_core_source):
+                # TODO: check if this is a local file we can copy?
+                raise LisaException(
+                    "Expected a remote url for tarball rdma-core install."
+                )
             tar_path = wget.get(
                 url=(self._rdma_core_source),
                 file_path=str(node.working_path),

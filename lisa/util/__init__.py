@@ -639,58 +639,6 @@ def is_valid_url(url: str, raise_error: bool = True) -> bool:
     return is_url
 
 
-def is_valid_source_code_package(
-    source_url: str,
-    expected_package_name_pattern: Pattern[str],
-    allowed_protocols: Optional[List[str]] = None,
-    expected_domains: Optional[List[str]] = None,
-) -> bool:
-    # avoid using a mutable default parameter
-    if not allowed_protocols:
-        allowed_protocols = [
-            "https",
-            "sftp",
-        ]
-    # first, check if it's a url.
-    if not is_valid_url(url=source_url, raise_error=False):
-        return False
-
-    # NOTE: urllib might not work as you'd expect.
-    # It doesn't throw on lots of things you wouldn't expect to be urls.
-    # You must verify the parts on your own, some of them may be empty, some null.
-    # check: https://docs.python.org/3/library/urllib.parse.html#url-parsing
-
-    try:
-        parts = urlparse(source_url)
-    except ValueError:
-        return False
-
-    # ex: from https://www.com/path/to/file.tar
-    # scheme : https
-    # netloc : www.com
-    # path   : path/to/file.tar
-
-    # get the filename from the path portion of the url
-    file_path = parts.path.split("/")[-1]
-    full_match = expected_package_name_pattern.match(file_path)
-    if not full_match:
-        return False
-
-    # check the expected domain is correct if present
-    valid_netloc = not expected_domains or any(
-        [domain.endswith(parts.netloc) for domain in expected_domains]
-    )
-
-    # optional but default is check access is via sftp/https
-    valid_scheme = any([parts.scheme == x for x in allowed_protocols])
-    return (
-        valid_scheme
-        and parts.netloc != ""
-        and valid_netloc
-        and (full_match.group(0) == file_path)
-    )
-
-
 def filter_ansi_escape(content: str) -> str:
     return __ansi_escape.sub("", content)
 
