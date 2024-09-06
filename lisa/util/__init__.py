@@ -25,7 +25,6 @@ from typing import (
     Union,
     cast,
 )
-from urllib.parse import urlparse
 
 import paramiko
 import pluggy
@@ -49,7 +48,7 @@ global_ssh_key_access_lock = Lock()
 # source -
 # https://github.com/django/django/blob/stable/1.3.x/django/core/validators.py#L45
 __url_pattern = re.compile(
-    r"^(?:http|s?ftp)s?://"  # http:// or https://
+    r"^(?:http|ftp)s?://"  # http:// or https://
     r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)"
     r"+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # ...domain
     r"localhost|"  # localhost...
@@ -602,9 +601,7 @@ def find_group_in_lines(
     return result
 
 
-def deep_update_dict(
-    src: Dict[str, Any], dest: Optional[Dict[str, Any]]
-) -> Dict[str, Any]:
+def deep_update_dict(src: Dict[str, Any], dest: Dict[str, Any]) -> Dict[str, Any]:
     if (
         dest is None
         or isinstance(dest, int)
@@ -618,7 +615,7 @@ def deep_update_dict(
 
     if isinstance(result, dict):
         for key, value in src.items():
-            if dest and isinstance(value, dict) and key in dest:
+            if isinstance(value, dict) and key in dest:
                 value = deep_update_dict(value, dest[key])
             result[key] = value
     elif isinstance(src, dict):
