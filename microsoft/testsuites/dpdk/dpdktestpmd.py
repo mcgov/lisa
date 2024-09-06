@@ -331,8 +331,9 @@ class DpdkTestpmd(Tool):
 
         return (
             f"{self._testpmd_install_path} {core_list} "
-            f"{nic_include_info} -- --forward-mode={mode} "
-            f"-a --stats-period 2 --nb-cores={forwarding_cores} {extra_args} "
+            f"{nic_include_info} --log-level netvsc,debug --log-level eal,debug -- "
+            f"--forward-mode={mode} -a --stats-period 2 "
+            f"--nb-cores={forwarding_cores} {extra_args} "
         )
 
     def run_for_n_seconds(self, cmd: str, timeout: int) -> str:

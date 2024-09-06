@@ -162,6 +162,28 @@ class Dpdk(TestSuite):
 
     @TestCaseMetadata(
         description="""
+            failsafe version with 1GiB hugepages.
+            This test case checks DPDK can be built and installed correctly.
+            Prerequisites, accelerated networking must be enabled.
+            The VM should have at least two network interfaces,
+            with one interface for management.
+            More details: https://docs.microsoft.com/en-us/azure/virtual-network/setup-dpdk#prerequisites # noqa: E501
+        """,
+        priority=2,
+        requirement=simple_requirement(
+            min_core_count=8,
+            min_nic_count=2,
+            network_interface=Sriov(),
+            unsupported_features=[Gpu, Infiniband],
+        ),
+    )
+    def verify_dpdk_build_failsafe_32bit(
+        self, node: Node, log: Logger, variables: Dict[str, Any]
+    ) -> None:
+        verify_dpdk_build(node, log, variables, "failsafe", build_32bit=True)
+
+    @TestCaseMetadata(
+        description="""
             failsafe version with 2MB hugepages
             This test case checks DPDK can be built and installed correctly.
             Prerequisites, accelerated networking must be enabled.

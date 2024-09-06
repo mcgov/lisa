@@ -13,7 +13,7 @@ from lisa import Node
 from lisa.operating_system import Debian, Fedora, OperatingSystem, Suse
 from lisa.tools import Git, Make, Pkgconfig, Tar, Wget
 from lisa.util import LisaException, SkippedException
-from microsoft.testsuites.dpdk.common import InstallArch
+from microsoft.testsuites.dpdk.common import InstallArch, InstallOS
 
 
 class RdmaCoreManager:
@@ -25,15 +25,15 @@ class RdmaCoreManager:
         ),
         InstallArch.x86_64: "cmake -DIN_PLACE=0 -DNO_MAN_PAGES=1 -DCMAKE_INSTALL_PREFIX=/usr",
     }
-    _install_packages: Dict[InstallArch, Dict[type, str]] = {
+    _install_packages = {
         InstallArch.x86_64: {
-            type(Debian): (
+            InstallOS.Debian: (
                 "cmake libudev-dev "
                 "libnl-3-dev libnl-route-3-dev ninja-build pkg-config "
                 "valgrind python3-dev cython3 python3-docutils pandoc "
                 "libssl-dev libelf-dev python3-pip libnuma-dev"
             ),
-            type(Fedora): (
+            InstallOS.Fedora: (
                 "cmake gcc libudev-devel "
                 "libnl3-devel pkg-config "
                 "valgrind python3-devel python3-docutils  "
@@ -45,7 +45,7 @@ class RdmaCoreManager:
             ),
         },
         InstallArch.i386: {
-            type(Debian): (
+            InstallOS.Debian: (
                 "gcc:i386 cmake ninja-build meson libnl-3-dev:i386 "
                 "libnl-route-3-dev:i386 pkg-config valgrind libelf-dev:i386"
             ),
@@ -100,8 +100,8 @@ class RdmaCoreManager:
         else:
             # no ref, no tree, use a default tar.gz
             self._rdma_core_source = (
-                "https://github.com/linux-rdma/rdma-core/"
-                "releases/download/v46.0/rdma-core-46.0.tar.gz"
+                "https://github.com/linux-rdma/rdma-core/releases/"
+                "download/v51.1/rdma-core-51.1.tar.gz"
             )
 
         self.is_installed_from_source = True
@@ -147,12 +147,12 @@ class RdmaCoreManager:
         # for dependencies, see https://github.com/linux-rdma/rdma-core#building
         if isinstance(distro, Debian):
             distro.install_packages(
-                self._install_packages[self._build_arch][type(Debian)]
+                self._install_packages[self._build_arch][InstallOS.Debian]
             )
         elif isinstance(distro, Fedora):
             distro.group_install_packages("Development Tools")
             distro.install_packages(
-                self._install_packages[self._build_arch][type(Fedora)]
+                self._install_packages[self._build_arch][InstallOS.Fedora]
             )
         else:
             # no-op, throw for invalid distro is before this function

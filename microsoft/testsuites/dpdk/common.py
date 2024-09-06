@@ -20,6 +20,11 @@ DPDK_STABLE_GIT_REPO = "https://dpdk.org/git/dpdk-stable"
 AZ_ROUTE_ALL_TRAFFIC = "0.0.0.0/0"
 
 
+class InstallOS(Enum):
+    Debian = "debian"
+    Fedora = "fedora"
+
+
 class InstallArch(Enum):
     x86_64 = "x86_64"
     i386 = "i386"
