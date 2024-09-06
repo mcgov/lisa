@@ -114,6 +114,10 @@ class Dpdk(TestSuite):
     def verify_dpdk_build_netvsc_32bit(
         self, node: Node, log: Logger, variables: Dict[str, Any]
     ) -> None:
+        if not node.nics.is_mana_device_present():
+            raise SkippedException(
+                "32bit test should only be run when MANA is present."
+            )
         verify_dpdk_build(
             node,
             log,
@@ -168,35 +172,6 @@ class Dpdk(TestSuite):
         self, node: Node, log: Logger, variables: Dict[str, Any]
     ) -> None:
         verify_dpdk_build(node, log, variables, "failsafe", HugePageSize.HUGE_2MB)
-
-    @TestCaseMetadata(
-        description="""
-            failsafe version with 1GiB hugepages.
-            This test case checks DPDK can be built and installed correctly.
-            Prerequisites, accelerated networking must be enabled.
-            The VM should have at least two network interfaces,
-            with one interface for management.
-            More details: https://docs.microsoft.com/en-us/azure/virtual-network/setup-dpdk#prerequisites # noqa: E501
-        """,
-        priority=2,
-        requirement=simple_requirement(
-            min_core_count=8,
-            min_nic_count=2,
-            network_interface=Sriov(),
-            unsupported_features=[Gpu, Infiniband],
-        ),
-    )
-    def verify_dpdk_build_failsafe_32bit(
-        self, node: Node, log: Logger, variables: Dict[str, Any]
-    ) -> None:
-        verify_dpdk_build(
-            node,
-            log,
-            variables,
-            "failsafe",
-            hugepage_size=HugePageSize.HUGE_2MB,
-            build_32bit=True,
-        )
 
     @TestCaseMetadata(
         description="""
@@ -686,7 +661,10 @@ class Dpdk(TestSuite):
     ) -> None:
         try:
             verify_dpdk_send_receive_multi_txrx_queue(
-                environment, log, variables, "netvsc"
+                environment,
+                log,
+                variables,
+                "netvsc",
             )
         except UnsupportedPackageVersionException as err:
             raise SkippedException(err)
@@ -833,6 +811,38 @@ class Dpdk(TestSuite):
                 "netvsc",
                 hugepage_size=HugePageSize.HUGE_1GB,
                 multiple_queues=True,
+            )
+        except UnsupportedPackageVersionException as err:
+            raise SkippedException(err)
+
+    @TestCaseMetadata(
+        description="""
+            Tests a basic sender/receiver setup for direct netvsc pmd setup.
+            Sender sends the packets, receiver receives them.
+            We check both to make sure the received traffic is within the expected
+            order-of-magnitude.
+            Test uses 1GB hugepages.
+        """,
+        priority=2,
+        requirement=simple_requirement(
+            min_core_count=8,
+            min_nic_count=2,
+            network_interface=Sriov(),
+            min_count=2,
+            unsupported_features=[Gpu, Infiniband],
+        ),
+    )
+    def verify_dpdk_send_receive_netvsc_32bit(
+        self, environment: Environment, log: Logger, variables: Dict[str, Any]
+    ) -> None:
+        try:
+            verify_dpdk_send_receive(
+                environment,
+                log,
+                variables,
+                "netvsc",
+                hugepage_size=HugePageSize.HUGE_2MB,
+                build_32bit=True,
             )
         except UnsupportedPackageVersionException as err:
             raise SkippedException(err)

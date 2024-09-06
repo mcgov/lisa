@@ -2,7 +2,6 @@ import itertools
 import time
 from collections import deque
 from decimal import Decimal
-from enum import Enum
 from functools import partial
 from typing import Any, Dict, List, Tuple, Union
 
@@ -49,7 +48,6 @@ from lisa.util.parallel import TaskManager, run_in_parallel, run_in_parallel_asy
 from microsoft.testsuites.dpdk.common import (
     AZ_ROUTE_ALL_TRAFFIC,
     DPDK_STABLE_GIT_REPO,
-    InstallArch,
     check_dpdk_support,
 )
 from microsoft.testsuites.dpdk.dpdktestpmd import PACKAGE_MANAGER_SOURCE, DpdkTestpmd
@@ -278,10 +276,7 @@ def initialize_node_resources(
 
     # verify SRIOV is setup as-expected on the node after compat check
     node.nics.check_pci_enabled(pci_enabled=True)
-    if build_32bit:
-        rdma_arch = InstallArch.i386
-    else:
-        rdma_arch = InstallArch.x86_64
+
     # create tool, initialize testpmd tool (installs dpdk)
     testpmd: DpdkTestpmd = node.tools.get(
         DpdkTestpmd,
@@ -292,7 +287,6 @@ def initialize_node_resources(
         rdma_core_source=rdma_core_source,
         rdma_core_ref=rdma_core_ref,
         build_32bit_dpdk=build_32bit,
-        build_rdma_core_arch=rdma_arch,
     )
 
     # init and enable hugepages (required by dpdk)
@@ -407,6 +401,7 @@ def init_nodes_concurrent(
     pmd: str,
     hugepage_size: HugePageSize,
     sample_apps: Union[List[str], None] = None,
+    build_32bit: bool = False,
 ) -> List[DpdkTestResources]:
     # quick check when initializing, have each node ping the other nodes.
     # When binding DPDK directly to the VF this helps ensure l2/l3 routes
@@ -425,6 +420,7 @@ def init_nodes_concurrent(
                     pmd,
                     hugepage_size=hugepage_size,
                     sample_apps=sample_apps,
+                    build_32bit=build_32bit,
                 )
                 for node in environment.nodes.list()
             ],
@@ -484,6 +480,7 @@ def verify_dpdk_send_receive(
     hugepage_size: HugePageSize,
     use_service_cores: int = 1,
     multiple_queues: bool = False,
+    build_32bit: bool = False,
 ) -> Tuple[DpdkTestResources, DpdkTestResources]:
     # helpful to have the public ips labeled for debugging
     external_ips = []
@@ -501,7 +498,12 @@ def verify_dpdk_send_receive(
     test_duration: int = variables.get("dpdk_test_duration", 15)
     kill_timeout = test_duration + 5
     test_kits = init_nodes_concurrent(
-        environment, log, variables, pmd, hugepage_size=hugepage_size
+        environment,
+        log,
+        variables,
+        pmd,
+        hugepage_size=hugepage_size,
+        build_32bit=build_32bit,
     )
 
     check_send_receive_compatibility(test_kits)
