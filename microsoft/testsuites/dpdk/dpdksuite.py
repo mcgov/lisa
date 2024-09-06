@@ -114,7 +114,14 @@ class Dpdk(TestSuite):
     def verify_dpdk_build_netvsc_32bit(
         self, node: Node, log: Logger, variables: Dict[str, Any]
     ) -> None:
-        verify_dpdk_build(node, log, variables, "netvsc", build_32bit=True)
+        verify_dpdk_build(
+            node,
+            log,
+            variables,
+            "netvsc",
+            hugepage_size=HugePageSize.HUGE_2MB,
+            build_32bit=True,
+        )
 
     @TestCaseMetadata(
         description="""
@@ -180,7 +187,14 @@ class Dpdk(TestSuite):
     def verify_dpdk_build_failsafe_32bit(
         self, node: Node, log: Logger, variables: Dict[str, Any]
     ) -> None:
-        verify_dpdk_build(node, log, variables, "failsafe", build_32bit=True)
+        verify_dpdk_build(
+            node,
+            log,
+            variables,
+            "failsafe",
+            hugepage_size=HugePageSize.HUGE_2MB,
+            build_32bit=True,
+        )
 
     @TestCaseMetadata(
         description="""
