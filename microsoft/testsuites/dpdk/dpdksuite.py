@@ -143,7 +143,9 @@ class Dpdk(TestSuite):
     def verify_dpdk_build_gb_hugepages_netvsc(
         self, node: Node, log: Logger, variables: Dict[str, Any]
     ) -> None:
-        verify_dpdk_build(node, log, variables, "netvsc", HugePageSize.HUGE_1GB)
+        verify_dpdk_build(
+            node, log, variables, "netvsc", hugepage_size=HugePageSize.HUGE_1GB
+        )
 
     @TestCaseMetadata(
         description="""
@@ -216,7 +218,9 @@ class Dpdk(TestSuite):
     def verify_dpdk_build_gb_hugepages_failsafe(
         self, node: Node, log: Logger, variables: Dict[str, Any]
     ) -> None:
-        verify_dpdk_build(node, log, variables, "failsafe", HugePageSize.HUGE_1GB)
+        verify_dpdk_build(
+            node, log, variables, "failsafe", hugepage_size=HugePageSize.HUGE_1GB
+        )
 
     @TestCaseMetadata(
         description="""
@@ -739,7 +743,7 @@ class Dpdk(TestSuite):
                 log,
                 variables,
                 "failsafe",
-                HugePageSize.HUGE_1GB,
+                hugepage_size=HugePageSize.HUGE_1GB,
             )
         except UnsupportedPackageVersionException as err:
             raise SkippedException(err)
@@ -766,7 +770,11 @@ class Dpdk(TestSuite):
     ) -> None:
         try:
             verify_dpdk_send_receive(
-                environment, log, variables, "failsafe", gibibyte_hugepages=True
+                environment,
+                log,
+                variables,
+                "failsafe",
+                hugepage_size=HugePageSize.HUGE_1GB,
             )
         except UnsupportedPackageVersionException as err:
             raise SkippedException(err)
@@ -823,8 +831,8 @@ class Dpdk(TestSuite):
                 log,
                 variables,
                 "netvsc",
+                hugepage_size=HugePageSize.HUGE_1GB,
                 multiple_queues=True,
-                gibibyte_hugepages=True,
             )
         except UnsupportedPackageVersionException as err:
             raise SkippedException(err)
@@ -855,7 +863,7 @@ class Dpdk(TestSuite):
                 log,
                 variables,
                 "netvsc",
-                HugePageSize.HUGE_1GB,
+                hugepage_size=HugePageSize.HUGE_1GB,
             )
         except UnsupportedPackageVersionException as err:
             raise SkippedException(err)
@@ -888,7 +896,7 @@ class Dpdk(TestSuite):
         force_dpdk_default_source(variables)
         pmd = "netvsc"
         verify_dpdk_l3fwd_ntttcp_tcp(
-            environment, log, variables, HugePageSize.HUGE_2MB, pmd=pmd
+            environment, log, variables, hugepage_size=HugePageSize.HUGE_2MB, pmd=pmd
         )
 
     @TestCaseMetadata(
